@@ -1,6 +1,6 @@
-"""One-shot setup: create tables and seed a couple of starter rows."""
+"""One-shot setup: create tables and generate the service signing material."""
 
-from . import models
+from . import models, signing
 from .database import Base, SessionLocal, engine
 
 
@@ -9,19 +9,8 @@ def run() -> None:
 
     db = SessionLocal()
     try:
-        if db.query(models.Item).count() == 0:
-            db.add_all(
-                [
-                    models.Item(
-                        title="Welcome to Group Project 1",
-                        description="This row was seeded into Postgres on first boot.",
-                    ),
-                    models.Item(
-                        title="Try it out",
-                        description="Add an item below, then delete it — the data lives in Postgres.",
-                    ),
-                ]
-            )
+        if db.query(models.SigningKey).count() == 0:
+            db.add(models.SigningKey(**signing.generate_signing_material()))
             db.commit()
     finally:
         db.close()
