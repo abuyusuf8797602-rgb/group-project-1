@@ -1,0 +1,109 @@
+# Base44 sandbox runbook for local development.
+#
+# Runs the app FROM THE CLONED SOURCE (bind mounts + live-reload dev servers),
+# never from a prebuilt application image, so edits show up without a rebuild.
+#
+#   web  (React + Vite dev server)  -> host port 3000  (the preview entry point)
+#   api  (FastAPI + uvicorn --reload)
+#   db   (Postgres 16)
+#   migrate (one-shot: create tables + generate the signing key)
+#
+# Single origin: only port 3000 is public. Vite proxies /api/* to the api
+# service, so the browser never makes a cross-origin request and no CORS is
+# needed.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: appdb
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d appdb"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+    restart: on-failure
+
+  migrate:
+    # One-shot: install deps, create tables, generate the service signing key,
+    # then exit.
+    image: python:3.12-slim
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+      # Needed so the one-shot can seal documents uploaded before encryption
+      # was introduced (same volume the api service stores them on).
+      - uploads:/data
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://app:app@db:5432/appdb
+      - STORAGE_DIR=/data/documents
+    command:
+      ["sh", "-ec", "pip install -q --disable-pip-version-check -r requirements.txt && python -m app.migrate"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api:
+    image: python:3.12-slim
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+      # Uploaded documents live on a volume, outside the bind mount.
+      - uploads:/data
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://app:app@db:5432/appdb
+      - STORAGE_DIR=/data/documents
+      - BASE44_PREVIEW_MODE
+    command:
+      ["sh", "-ec", "pip install -q --disable-pip-version-check -r requirements.txt && exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"]
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      # Probes the framework's own /openapi.json (no app code added for this).
+      test:
+        ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/openapi.json').status==200 else 1)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 60s
+    restart: on-failure
+
+  web:
+    image: node:22-slim
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+      # Keep node_modules out of the bind mount (installed into the volume).
+      - web_node_modules:/app/node_modules
+    environment:
+      # Let the platform's preview host through Vite's dev-server host check
+      # (Vite >= 6.1 appends this to server.allowedHosts).
+      - __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS
+      - BASE44_PREVIEW_MODE
+    command:
+      ["sh", "-ec", "npm install --no-audit --no-fund && exec npm run dev -- --host 0.0.0.0 --port 5173"]
+    ports:
+      - "3000:5173"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:5173/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 60s
+    restart: on-failure
+
+volumes:
+  db_data:
+  web_node_modules:
+  uploads:
