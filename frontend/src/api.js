@@ -34,6 +34,13 @@ export const api = {
       body: JSON.stringify(payload),
     }).then(handle),
 
+  createKeyExchange: (token, payload) =>
+    fetch(`${API}/documents/${token}/key-exchange`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).then(handle),
+
   verifyDocument: (file) => {
     const form = new FormData()
     form.append('file', file)
@@ -41,6 +48,8 @@ export const api = {
   },
 
   downloadUrl: (token) => `${API}/documents/${token}/download`,
+
+  ciphertextUrl: (token) => `${API}/documents/${token}/ciphertext`,
 }
 
 export function formatBytes(bytes) {

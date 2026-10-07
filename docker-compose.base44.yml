@@ -35,8 +35,12 @@ services:
     working_dir: /app
     volumes:
       - ./backend:/app
+      # Needed so the one-shot can seal documents uploaded before encryption
+      # was introduced (same volume the api service stores them on).
+      - uploads:/data
     environment:
       - DATABASE_URL=postgresql+psycopg2://app:app@db:5432/appdb
+      - STORAGE_DIR=/data/documents
     command:
       ["sh", "-ec", "pip install -q --disable-pip-version-check -r requirements.txt && python -m app.migrate"]
     depends_on:

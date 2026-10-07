@@ -218,10 +218,91 @@ h2 {
   color: #b45309;
 }
 
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
 .link-row {
   display: flex;
   gap: 8px;
   margin-top: 12px;
+}
+
+.share {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border);
+}
+
+.share .form {
+  margin-top: 10px;
+}
+
+.share code,
+.envelope code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.field-row {
+  display: flex;
+  gap: 12px;
+}
+
+.field-row .field {
+  flex: 1;
+  min-width: 0;
+}
+
+textarea {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: #fff;
+  resize: vertical;
+}
+
+textarea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+
+.envelope {
+  margin-top: 12px;
+}
+
+.envelope summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.envelope-list {
+  margin: 10px 0 0;
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.envelope-list dt {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.envelope-list dd {
+  margin: 0;
+  word-break: break-all;
 }
 
 .link-row input {

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 import { api, formatBytes, formatTimestamp } from '../api.js'
+import KeyExchangePanel from '../components/KeyExchangePanel.jsx'
 
 function signingLink(token) {
   return `${window.location.origin}/sign/${token}`
@@ -74,7 +75,8 @@ export default function Home() {
     <>
       <h1>Documents</h1>
       <p className="subtitle">
-        Upload a document to create a signing link, then send that link to the signer.
+        Upload a document to create a signing link. Files are stored as AES-256-GCM envelopes and
+        their keys can be shared with a recipient over an X25519 key exchange.
       </p>
 
       <form className="card form" onSubmit={upload}>
@@ -110,9 +112,14 @@ export default function Home() {
                       {formatBytes(doc.size)} · uploaded {formatTimestamp(doc.created_at)}
                     </p>
                   </div>
-                  <span className={`badge ${doc.signature ? 'ok' : 'pending'}`}>
-                    {doc.signature ? 'Signed' : 'Awaiting signature'}
-                  </span>
+                  <div className="badges">
+                    <span className={`badge ${doc.signature ? 'ok' : 'pending'}`}>
+                      {doc.signature ? 'Signed' : 'Awaiting signature'}
+                    </span>
+                    <span className={`badge ${doc.encrypted ? 'ok' : 'pending'}`}>
+                      {doc.encrypted ? 'Encrypted' : 'Plaintext'}
+                    </span>
+                  </div>
                 </div>
 
                 {doc.signature && (
@@ -125,6 +132,8 @@ export default function Home() {
                 <SigningLink token={doc.token} />
 
                 <p className="mono hint">SHA-256 {doc.sha256}</p>
+
+                <KeyExchangePanel doc={doc} onShared={load} />
               </li>
             ))}
           </ul>
